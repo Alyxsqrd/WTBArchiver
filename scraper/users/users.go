@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -77,12 +80,54 @@ func Archive(max int, pwd string, client http.Client, db *sql.DB) error {
 		return err
 	}
 
+	assetsFolder := "../assets"
+	thumbnailsFolder := filepath.Join(assetsFolder, "thumbnails")
+
+	// Create assets and thumbnails folders if they don't exist
+	err = os.MkdirAll(assetsFolder, os.ModePerm)
+	if err != nil {
+		return err
+	}
+	err = os.MkdirAll(thumbnailsFolder, os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	avatarsFolder := filepath.Join(thumbnailsFolder, "avatars")
+	headshotsFolder := filepath.Join(thumbnailsFolder, "headshots")
+
+	// Create avatars and headshots folders inside thumbnails folder if they don't exist
+	err = os.MkdirAll(avatarsFolder, os.ModePerm)
+	if err != nil {
+		return err
+	}
+	err = os.MkdirAll(headshotsFolder, os.ModePerm)
+	if err != nil {
+		return err
+	}
+
 	for i := 1; i <= max; i++ {
 		id := strconv.Itoa(i)
 
 		playerData, err := fetchPlayerData(id, client)
 		if err != nil {
 			fmt.Println("\033[91m[SKIP] User #" + id + " Player Data: " + err.Error())
+			continue
+		}
+
+		// Download CharacterImage
+		imagePath := filepath.Join(avatarsFolder, id+".png")
+		err = downloadFile(playerData.CharacterImage, imagePath)
+		if err != nil {
+			fmt.Println("\033[91m[SKIP] User #" + id + " Character Image: " + err.Error())
+			continue
+		}
+
+		// Download CharacterHeadshot
+		headshotPath := filepath.Join(headshotsFolder, id+".png")
+		err = downloadFile(playerData.CharacterHeadshot, headshotPath)
+		if err != nil {
+			fmt.Println("\033[91m[SKIP] User #" + id + " Character Headshot: " + err.Error())
 			continue
 		}
 
@@ -102,6 +147,27 @@ func Archive(max int, pwd string, client http.Client, db *sql.DB) error {
 		}
 
 		fmt.Println("\033[92m[DONE] User #" + id + " successfully archived!")
+	}
+
+	return nil
+}
+
+func downloadFile(url string, filepath string) error {
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	out, err := os.Create(filepath)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, resp.Body)
+	if err != nil {
+		return err
 	}
 
 	return nil
