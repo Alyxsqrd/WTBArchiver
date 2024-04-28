@@ -115,20 +115,24 @@ func Archive(max int, pwd string, client http.Client, db *sql.DB) error {
 			continue
 		}
 
-		// Download CharacterImage
-		imagePath := filepath.Join(avatarsFolder, id+".png")
-		err = downloadFile(playerData.CharacterImage, imagePath)
-		if err != nil {
-			fmt.Println("\033[91m[SKIP] User #" + id + " Character Image: " + err.Error())
-			continue
+		if playerData.CharacterImage != "" && playerData.CharacterImage != "https://cdn.worldtobuild.com/player-snapshots/snapshot_default_full.png" {
+			// Download CharacterImage
+			imagePath := filepath.Join(avatarsFolder, id+".png")
+			err = downloadFile(playerData.CharacterImage, imagePath)
+			if err != nil {
+				fmt.Println("\033[91m[SKIP] User #" + id + " Character Image: " + err.Error())
+				continue
+			}
 		}
 
-		// Download CharacterHeadshot
-		headshotPath := filepath.Join(headshotsFolder, id+".png")
-		err = downloadFile(playerData.CharacterHeadshot, headshotPath)
-		if err != nil {
-			fmt.Println("\033[91m[SKIP] User #" + id + " Character Headshot: " + err.Error())
-			continue
+		if playerData.CharacterHeadshot != "" && playerData.CharacterHeadshot != "https://cdn.worldtobuild.com/player-snapshots/snapshot_default_head.png" {
+			// Download CharacterHeadshot
+			headshotPath := filepath.Join(headshotsFolder, id+".png")
+			err = downloadFile(playerData.CharacterHeadshot, headshotPath)
+			if err != nil {
+				fmt.Println("\033[91m[SKIP] User #" + id + " Character Headshot: " + err.Error())
+				continue
+			}
 		}
 
 		lastSeenAt, err := time.Parse("01-02-2006 3:04pm", playerData.LastOnlineDate)
