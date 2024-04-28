@@ -16,14 +16,16 @@ import (
 )
 
 type clubData struct {
-	ID                 int    `json:"-"`
-	Name               string `json:"Name"`
-	About              string `json:"About"`
-	JoinType           string `json:"JoinType"`
-	VerificationIcon   bool   `json:"VerificationIcon"`
-	OwnerID            string `json:"OwnerID"`
-	CreationDateFormat string `json:"CreationDateFormat"`
-	Emblem             string `json:"Emblem"`
+	ID                 int         `json:"-"`
+	Name               string      `json:"Name"`
+	About              string      `json:"About"`
+	JoinType           string      `json:"JoinType"`
+	JoinTypeID         int         `json:"-"`
+	VerificationIcon   bool        `json:"VerificationIcon"`
+	OwnerID            interface{} `json:"OwnerID"`
+	CreationDateFormat string      `json:"CreationDateFormat"`
+	Emblem             string      `json:"Emblem"`
+	MemberCount        int         `json:"MemberCount"`
 }
 
 func fetchClubData(clubID string, client http.Client) (*clubData, error) {
@@ -59,14 +61,29 @@ func fetchClubData(clubID string, client http.Client) (*clubData, error) {
 	}
 	creationDate := strconv.FormatInt(createdAt.Unix(), 10) // Format as UNIX timestamp
 
+	// Map JoinType to integer value
+	var joinTypeID int
+	switch responseData.Data.JoinType {
+	case "public":
+		joinTypeID = 1
+	case "request-only":
+		joinTypeID = 2
+	case "invite-only":
+		joinTypeID = 3
+	default:
+		joinTypeID = 0 // Default value for unknown types
+	}
+
 	return &clubData{
 		Name:               responseData.Data.Name,
 		About:              responseData.Data.About,
 		JoinType:           responseData.Data.JoinType,
+		JoinTypeID:         joinTypeID,
 		VerificationIcon:   responseData.Data.VerificationIcon,
 		OwnerID:            responseData.Data.OwnerID,
 		CreationDateFormat: creationDate,
 		Emblem:             responseData.Data.Emblem,
+		MemberCount:        responseData.Data.MemberCount,
 	}, nil
 }
 
@@ -104,8 +121,8 @@ func ArchiveClubs(max int, pwd string, client http.Client, db *sql.DB) error {
 		}
 
 		_, err = db.Exec(
-			"INSERT INTO clubs (id, name, description, join_type_id, is_verified, owner_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-			i, clubData.Name, clubData.About, clubData.JoinType, clubData.VerificationIcon, clubData.OwnerID, clubData.CreationDateFormat,
+			"INSERT INTO clubs (id, name, description, join_type_id, is_verified, owner_id, created_at, member_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+			i, clubData.Name, clubData.About, clubData.JoinTypeID, clubData.VerificationIcon, clubData.OwnerID, clubData.CreationDateFormat, clubData.MemberCount,
 		)
 		if err != nil {
 			fmt.Println("\033[91m[SKIP] Club #" + id + " Club Database: " + err.Error())
