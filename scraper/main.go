@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"net/http"
 	"os"
-	"scraper/club_roles"
+	"scraper/club_members"
 )
 
 func main() {
@@ -28,7 +28,8 @@ func main() {
 	// err = products.Archive(1826, pwd, client, db)
 	// err = sets.Archive(99, pwd, client, db)
 	// err = clubs.Archive(103, pwd, client, db)
-	err = club_roles.Archive(468, pwd, client, db)
+	// err = club_roles.Archive(468, pwd, client, db)
+	err = club_members.Archive(468, pwd, client, db)
 	// err = users.Archive(11906, pwd, client, db)
 
 	if err != nil {
