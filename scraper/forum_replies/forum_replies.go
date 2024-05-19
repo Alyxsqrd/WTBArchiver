@@ -23,12 +23,17 @@ type ReplyData struct {
 	Date string `json:"FullDate"`
 }
 
+type QuotingData struct {
+	Text string `json:"Text"`
+}
+
 type ForumResponse struct {
-	Success    bool        `json:"Success"`
-	Message    string      `json:"Message"`
-	Results    []struct {
-		UserData  UserData  `json:"UserData"`
-		ReplyData ReplyData `json:"ReplyData"`
+	Success bool   `json:"Success"`
+	Message string `json:"Message"`
+	Results []struct {
+		UserData    UserData    `json:"UserData"`
+		ReplyData   ReplyData   `json:"ReplyData"`
+		QuotingData QuotingData `json:"QuoteData"`
 	} `json:"Results"`
 	NextCursor string `json:"NextCursor"`
 }
@@ -41,9 +46,10 @@ func parseDate(dateString string) (int, error) {
 	return int(date.Unix()), nil
 }
 
-func fetchForumReplies(threadID int, client http.Client) ([]UserData, []ReplyData, error) {
+func fetchForumReplies(threadID int, client http.Client) ([]UserData, []ReplyData, []QuotingData, error) {
 	var allUserData []UserData
 	var allReplyData []ReplyData
+	var allQuotingData []QuotingData
 	nextCursor := ""
 
 	for {
@@ -54,27 +60,28 @@ func fetchForumReplies(threadID int, client http.Client) ([]UserData, []ReplyDat
 
 		res, err := client.Get(url)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		defer res.Body.Close()
 
 		if res.StatusCode != 200 {
-			return nil, nil, errors.New("invalid status: " + strconv.Itoa(res.StatusCode))
+			return nil, nil, nil, errors.New("invalid status: " + strconv.Itoa(res.StatusCode))
 		}
 
 		var responseData ForumResponse
 		err = json.NewDecoder(res.Body).Decode(&responseData)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 
 		if !responseData.Success {
-			return nil, nil, errors.New("API request failed: " + responseData.Message)
+			return nil, nil, nil, errors.New("API request failed: " + responseData.Message)
 		}
 
 		for _, result := range responseData.Results {
 			allUserData = append(allUserData, result.UserData)
 			allReplyData = append(allReplyData, result.ReplyData)
+			allQuotingData = append(allQuotingData, result.QuotingData)
 		}
 
 		if responseData.NextCursor != "" {
@@ -84,37 +91,45 @@ func fetchForumReplies(threadID int, client http.Client) ([]UserData, []ReplyDat
 		}
 	}
 
-	return allUserData, allReplyData, nil
+	return allUserData, allReplyData, allQuotingData, nil
 }
 
 func Archive(threadID int, pwd string, client http.Client, db *sql.DB) error {
-	_, err := db.Exec("DELETE FROM forum_replies WHERE thread_id = ?", threadID)
+	// Clear the forum_replies table
+	_, err := db.Exec("DELETE FROM forum_replies")
 	if err != nil {
 		return err
 	}
 
-	userData, replyData, err := fetchForumReplies(threadID, client)
+	// Fetch forum replies
+	allUserData, replyData, quotingData, err := fetchForumReplies(threadID, client)
 	if err != nil {
 		return err
 	}
 
+	// Iterate over each reply and archive it
 	for i, reply := range replyData {
-		user := userData[i]
-
 		createdAt, err := parseDate(reply.Date)
 		if err != nil {
 			return err
 		}
 
+		// Handle quoting data
+		quotingText := sql.NullString{}
+		if quotingData[i].Text != "" {
+			quotingText = sql.NullString{String: quotingData[i].Text, Valid: true}
+		}
+
+		// Insert the reply into the database
 		_, err = db.Exec(
-			"INSERT INTO forum_replies (thread_id, body, author_id, created_at) VALUES (?, ?, ?, ?)",
-			threadID, reply.Text, user.UserID, createdAt,
+			"INSERT INTO forum_replies (thread_id, body, author_id, created_at, quoting) VALUES (?, ?, ?, ?, ?)",
+			threadID, reply.Text, allUserData[i].UserID, createdAt, quotingText,
 		)
 		if err != nil {
 			return err
 		}
 
-		fmt.Println("[DONE] Reply by " + user.Username + " archived!")
+		fmt.Println("[DONE] Reply by " + allUserData[i].Username + " archived!")
 	}
 
 	return nil
