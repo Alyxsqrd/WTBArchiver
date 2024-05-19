@@ -94,42 +94,48 @@ func fetchForumReplies(threadID int, client http.Client) ([]UserData, []ReplyDat
 	return allUserData, allReplyData, allQuotingData, nil
 }
 
-func Archive(threadID int, pwd string, client http.Client, db *sql.DB) error {
+func Archive(maxThreadID int, pwd string, client http.Client, db *sql.DB) error {
 	// Clear the forum_replies table
 	_, err := db.Exec("DELETE FROM forum_replies")
 	if err != nil {
 		return err
 	}
 
-	// Fetch forum replies
-	allUserData, replyData, quotingData, err := fetchForumReplies(threadID, client)
-	if err != nil {
-		return err
-	}
-
-	// Iterate over each reply and archive it
-	for i, reply := range replyData {
-		createdAt, err := parseDate(reply.Date)
+	// Iterate over each thread ID up to maxThreadID
+	for threadID := 1; threadID <= maxThreadID; threadID++ {
+		// Fetch forum replies for the current thread ID
+		allUserData, replyData, quotingData, err := fetchForumReplies(threadID, client)
 		if err != nil {
-			return err
+			fmt.Printf("Error fetching replies for thread ID %d: %v\n", threadID, err)
+			continue // Move to the next thread ID if there's an error
 		}
 
-		// Handle quoting data
-		quotingText := sql.NullString{}
-		if quotingData[i].Text != "" {
-			quotingText = sql.NullString{String: quotingData[i].Text, Valid: true}
-		}
+		// Iterate over each reply and archive it
+		for i, reply := range replyData {
+			createdAt, err := parseDate(reply.Date)
+			if err != nil {
+				fmt.Printf("Error parsing date for reply ID %d: %v\n", reply.ID, err)
+				continue // Move to the next reply if there's an error
+			}
 
-		// Insert the reply into the database
-		_, err = db.Exec(
-			"INSERT INTO forum_replies (thread_id, body, author_id, created_at, quoting) VALUES (?, ?, ?, ?, ?)",
-			threadID, reply.Text, allUserData[i].UserID, createdAt, quotingText,
-		)
-		if err != nil {
-			return err
-		}
+			// Handle quoting data
+			quotingText := sql.NullString{}
+			if quotingData[i].Text != "" {
+				quotingText = sql.NullString{String: quotingData[i].Text, Valid: true}
+			}
 
-		fmt.Println("[DONE] Reply by " + allUserData[i].Username + " archived!")
+			// Insert the reply into the database
+			_, err = db.Exec(
+				"INSERT INTO forum_replies (thread_id, body, author_id, created_at, quoting) VALUES (?, ?, ?, ?, ?)",
+				threadID, reply.Text, allUserData[i].UserID, createdAt, quotingText,
+			)
+			if err != nil {
+				fmt.Printf("Error inserting reply into database for thread ID %d: %v\n", threadID, err)
+				continue // Move to the next reply if there's an error
+			}
+
+			fmt.Printf("[DONE] Reply by %s archived for thread ID %d!\n", allUserData[i].Username, threadID)
+		}
 	}
 
 	return nil
