@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -17,7 +18,20 @@ type UserData struct {
 
 type RoleData struct {
 	ClubID int `json:"ClubID"`
-	Rank   int `json:"Rank"`
+}
+
+// Extracts the role ID from the API URL
+func extractRoleIDFromURL(url string) (int, error) {
+	parts := strings.Split(url, "/")
+	for i := range parts {
+		if i == len(parts)-1 {
+			continue
+		}
+		if num, err := strconv.Atoi(parts[i]); err == nil {
+			return num, nil
+		}
+	}
+	return 0, errors.New("role ID not found in URL")
 }
 
 // Fetch club member data with pagination support
@@ -25,6 +39,12 @@ func fetchClubMemberData(id int, client http.Client) ([]UserData, []RoleData, er
 	var allUserData []UserData
 	var allRoleData []RoleData
 	nextPage := 1
+
+	url := fmt.Sprintf("https://lake.worldtobuild.com/api/club/GetClubMembersByRoleSet/%d/%d", id, nextPage)
+	_, err := extractRoleIDFromURL(url)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	for nextPage != 0 {
 		url := fmt.Sprintf("https://lake.worldtobuild.com/api/club/GetClubMembersByRoleSet/%d/%d", id, nextPage)
@@ -56,7 +76,7 @@ func fetchClubMemberData(id int, client http.Client) ([]UserData, []RoleData, er
 		}
 
 		allUserData = append(allUserData, responseData.Data...)
-		allRoleData = responseData.RoleData
+		allRoleData = append(allRoleData, responseData.RoleData...) // Append all RoleData
 
 		if responseData.NextPage != nil {
 			nextPage = *responseData.NextPage
@@ -91,13 +111,12 @@ func Archive(max int, pwd string, client http.Client, db *sql.DB) error {
 			logError("No role data found for Club #" + strconv.Itoa(i))
 			continue
 		}
-		roleRank := roleData[0].Rank
 		clubID := roleData[0].ClubID
 
 		for _, user := range userData {
 			_, err = db.Exec(
 				"INSERT INTO clubs_members (club_ID, role_ID, user_ID) VALUES (?, ?, ?)",
-				clubID, roleRank, user.UserID,
+				clubID, i, user.UserID, // Use i directly as role ID
 			)
 			if err != nil {
 				logError("Failed to insert member data for Club #" + strconv.Itoa(clubID) + ": " + err.Error())
