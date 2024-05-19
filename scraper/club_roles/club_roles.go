@@ -12,6 +12,7 @@ import (
 )
 
 type RoleData struct {
+	ID      int    `json:"ID"`
 	ClubID  int    `json:"ClubID"`
 	Name    string `json:"Name"`
 	Excerpt string `json:"Excerpt"`
@@ -45,6 +46,10 @@ func fetchClubRoleData(id int, client http.Client) ([]RoleData, error) {
 		return nil, errors.New("API request failed: " + responseData.Message)
 	}
 
+	for i := range responseData.Data {
+		responseData.Data[i].ID = id
+	}
+
 	return responseData.Data, nil
 }
 
@@ -53,7 +58,6 @@ func logError(message string) {
 }
 
 func Archive(max int, pwd string, client http.Client, db *sql.DB) error {
-	// Clear the clubs_roles table
 	_, err := db.Exec("DELETE FROM clubs_roles")
 	if err != nil {
 		return err
@@ -68,8 +72,8 @@ func Archive(max int, pwd string, client http.Client, db *sql.DB) error {
 
 		for _, role := range roleData {
 			_, err = db.Exec(
-				"INSERT INTO clubs_roles (club_ID, name, excerpt, rank) VALUES (?, ?, ?, ?)",
-				role.ClubID, role.Name, role.Excerpt, role.Rank,
+				"INSERT INTO clubs_roles (ID, club_ID, name, excerpt, rank) VALUES (?, ?, ?, ?, ?)",
+				role.ID, role.ClubID, role.Name, role.Excerpt, role.Rank,
 			)
 			if err != nil {
 				logError("Failed to insert role data for Club #" + strconv.Itoa(role.ClubID) + ": " + err.Error())
