@@ -35,15 +35,19 @@ type productData struct {
 	Sales               int    `json:"-"`
 	SalesStr            string `json:"sales"`
 	Description         *string
-	BuildBux            int `json:",string"`
-	Qbits               int `json:",string"`
+	BuildBux            int    `json:"-"`
+	BuildBuxStr         string `json:"buildbux"`
+	Qbits               int    `json:"-"`
+	QbitsStr            string `json:"qbits"`
 	FullDate_LastUpdate string
 }
 
 func (pd *productData) UnmarshalJSON(b []byte) error {
 	type Alias productData
 	aux := &struct {
-		SalesStr string `json:"sales"`
+		SalesStr    string `json:"sales"`
+		BuildBuxStr string `json:"buildbux"`
+		QbitsStr    string `json:"qbits"`
 		*Alias
 	}{
 		Alias: (*Alias)(pd),
@@ -51,20 +55,40 @@ func (pd *productData) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &aux); err != nil {
 		return err
 	}
-	if strings.HasSuffix(aux.SalesStr, "K+") {
-		salesStr := strings.TrimSuffix(aux.SalesStr, "K+")
+
+	// Process sales string
+	salesStr := strings.ReplaceAll(aux.SalesStr, ",", "")
+	if strings.HasSuffix(salesStr, "K+") {
+		salesStr = strings.TrimSuffix(salesStr, "K+")
 		sales, err := strconv.ParseFloat(salesStr, 64)
 		if err != nil {
 			return err
 		}
 		pd.Sales = int(sales * 1000)
 	} else {
-		sales, err := strconv.Atoi(aux.SalesStr)
+		sales, err := strconv.Atoi(salesStr)
 		if err != nil {
 			return err
 		}
 		pd.Sales = sales
 	}
+
+	// Process BuildBux string
+	buildBuxStr := strings.ReplaceAll(aux.BuildBuxStr, ",", "")
+	buildBux, err := strconv.Atoi(buildBuxStr)
+	if err != nil {
+		return err
+	}
+	pd.BuildBux = buildBux
+
+	// Process Qbits string
+	qbitsStr := strings.ReplaceAll(aux.QbitsStr, ",", "")
+	qbits, err := strconv.Atoi(qbitsStr)
+	if err != nil {
+		return err
+	}
+	pd.Qbits = qbits
+
 	return nil
 }
 
