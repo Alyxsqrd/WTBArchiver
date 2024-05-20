@@ -5,9 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
 	"net/http"
 	"strconv"
 	"time"
+
+	"scraper/utils" // Import the utils package here
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -118,16 +121,28 @@ func Archive(maxThreadID int, pwd string, client http.Client, db *sql.DB) error 
 				continue // Move to the next reply if there's an error
 			}
 
+			// Unescape HTML entities in reply text
+			reply.Text = html.UnescapeString(reply.Text)
+
+			// Sanitize reply text
+			sanitizedText := utils.SanitizeString(reply.Text)
+
+			// Unescape HTML entities in quoting text
+			quotingData[i].Text = html.UnescapeString(quotingData[i].Text)
+
+			// Sanitize quoting text
+			sanitizedQuotingText := utils.SanitizeString(quotingData[i].Text)
+
 			// Handle quoting data
 			quotingText := sql.NullString{}
 			if quotingData[i].Text != "" {
-				quotingText = sql.NullString{String: quotingData[i].Text, Valid: true}
+				quotingText = sql.NullString{String: sanitizedQuotingText, Valid: true}
 			}
 
 			// Insert the reply into the database
 			_, err = db.Exec(
 				"INSERT INTO forum_replies (thread_id, body, author_id, created_at, quoting) VALUES (?, ?, ?, ?, ?)",
-				threadID, reply.Text, allUserData[i].UserID, createdAt, quotingText,
+				threadID, sanitizedText, allUserData[i].UserID, createdAt, quotingText,
 			)
 			if err != nil {
 				fmt.Printf("Error inserting reply into database for thread ID %d: %v\n", threadID, err)
