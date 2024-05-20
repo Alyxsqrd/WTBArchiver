@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"scraper/utils"
+
 	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/net/html"
 )
@@ -306,7 +308,10 @@ func Archive(max int, pwd string, client http.Client, db *sql.DB) error {
 		}
 		defer stmt.Close()
 
-		_, err = stmt.Exec(forumPost.ID, forumPost.Title, forumPost.CategoryID, forumPost.Body, forumPost.IsLocked, forumPost.IsPinned, forumPost.Views, forumPost.AuthorID, forumPost.CreatedAt)
+		sanitizedTitle := utils.SanitizeString(forumPost.Title)
+		sanitizedBody := utils.SanitizeString(forumPost.Body)
+
+		_, err = stmt.Exec(forumPost.ID, sanitizedTitle, forumPost.CategoryID, sanitizedBody, forumPost.IsLocked, forumPost.IsPinned, forumPost.Views, forumPost.AuthorID, forumPost.CreatedAt)
 		if err != nil {
 			fmt.Println("Error executing SQL statement:", err)
 			continue
