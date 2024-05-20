@@ -216,23 +216,14 @@ func fetchCategoryID(id string, client http.Client) (int, error) {
 	var categoryID int
 	var extractCategoryID func(*html.Node)
 	extractCategoryID = func(n *html.Node) {
-		if n.Type == html.ElementNode && n.Data == "span" {
+		if n.Type == html.ElementNode && n.Data == "a" {
 			for _, attr := range n.Attr {
-				if attr.Key == "class" {
-					for c := n.FirstChild; c != nil; c =
-						c.NextSibling {
-						if c.Type == html.ElementNode && c.Data == "a" {
-							for _, attr := range c.Attr {
-								if attr.Key == "href" && strings.Contains(attr.Val, "/forum/subforum/") {
-									parts := strings.Split(attr.Val, "/")
-									if len(parts) > 3 {
-										categoryIDStr := parts[3]
-										categoryID, _ = strconv.Atoi(categoryIDStr)
-									}
-									return
-								}
-							}
-						}
+				if attr.Key == "href" && strings.Contains(attr.Val, "/forum/subforum/") {
+					parts := strings.Split(attr.Val, "/")
+					if len(parts) > 3 {
+						categoryIDStr := parts[3]
+						categoryID, _ = strconv.Atoi(categoryIDStr)
+						return
 					}
 				}
 			}
