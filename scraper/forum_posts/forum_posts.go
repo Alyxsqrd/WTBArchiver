@@ -207,11 +207,12 @@ func fetchCategoryID(id string, client http.Client) (int, error) {
 		if n.Type == html.ElementNode && n.Data == "span" {
 			for _, attr := range n.Attr {
 				if attr.Key == "class" {
-					for c := n.FirstChild; c != nil; c = c.NextSibling {
+					for c := n.FirstChild; c != nil; c =
+						c.NextSibling {
 						if c.Type == html.ElementNode && c.Data == "a" {
-							for _, a := range c.Attr {
-								if a.Key == "href" && strings.Contains(a.Val, "/forum/subforum/") {
-									parts := strings.Split(a.Val, "/")
+							for _, attr := range c.Attr {
+								if attr.Key == "href" && strings.Contains(attr.Val, "/forum/subforum/") {
+									parts := strings.Split(attr.Val, "/")
 									if len(parts) > 3 {
 										categoryIDStr := parts[3]
 										categoryID, _ = strconv.Atoi(categoryIDStr)
@@ -234,6 +235,12 @@ func fetchCategoryID(id string, client http.Client) (int, error) {
 }
 
 func Archive(max int, pwd string, client http.Client, db *sql.DB) error {
+	// Clear the forum_threads table
+	_, err := db.Exec("DELETE FROM forum_threads")
+	if err != nil {
+		return err
+	}
+
 	// Define range of IDs to scrape
 	startID := 1
 
