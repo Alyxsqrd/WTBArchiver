@@ -13,6 +13,7 @@ import (
 )
 
 type ForumPost struct {
+	ID         int
 	Title      string
 	CategoryID int
 	Body       string
@@ -23,7 +24,15 @@ type ForumPost struct {
 }
 
 func fetchForumPost(id string, client http.Client) (ForumPost, error) {
+
 	var forumPost ForumPost
+
+	// Convert id from string to int
+	forumPostID, err := strconv.Atoi(id)
+	if err != nil {
+		return forumPost, err
+	}
+	forumPost.ID = forumPostID
 
 	// Fetch from worldtobuild.com
 	res, err := client.Get("https://www.worldtobuild.com/forum/thread?threadId=" + id)
@@ -264,14 +273,14 @@ func Archive(max int, pwd string, client http.Client, db *sql.DB) error {
 		forumPost.CategoryID = categoryID
 
 		// Insert scraped data into database
-		stmt, err := db.Prepare("INSERT INTO forum_threads (title, category_id, body, is_locked, is_pinned, views, author_id) VALUES (?, ?, ?, ?, ?, ?, ?)")
+		stmt, err := db.Prepare("INSERT INTO forum_threads (id, title, category_id, body, is_locked, is_pinned, views, author_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
 		if err != nil {
 			fmt.Println("Error preparing SQL statement:", err)
 			continue
 		}
 		defer stmt.Close()
 
-		_, err = stmt.Exec(forumPost.Title, forumPost.CategoryID, forumPost.Body, forumPost.IsLocked, forumPost.IsPinned, forumPost.Views, forumPost.AuthorID)
+		_, err = stmt.Exec(forumPost.ID, forumPost.Title, forumPost.CategoryID, forumPost.Body, forumPost.IsLocked, forumPost.IsPinned, forumPost.Views, forumPost.AuthorID)
 		if err != nil {
 			fmt.Println("Error executing SQL statement:", err)
 			continue
