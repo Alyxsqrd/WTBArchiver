@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"net/http"
 	"os"
-	"scraper/forum_posts"
+	"scraper/reputation"
 )
 
 func main() {
@@ -27,7 +27,7 @@ func main() {
 	// err = designs.Archive(5720, pwd, client, db)
 	// err = products.Archive(1826, pwd, client, db)
 	// err = forum_replies.Archive(2856, pwd, client, db)
-	err = forum_posts.Archive(2856, pwd, client, db)
+	//err = forum_posts.Archive(2856, pwd, client, db)
 	// err = sets.Archive(99, pwd, client, db)
 	// err = clubs.Archive(103, pwd, client, db)
 	// err = club_roles.Archive(468, pwd, client, db)
@@ -35,6 +35,7 @@ func main() {
 	// err = pets.Archive(26, pwd, client, db)
 	// err = user_achievements.Archive(11907, pwd, client, db)
 	//err = users.Archive(11907, pwd, client, db)
+	err = reputation.Archive(11907, pwd, client, db)
 
 	if err != nil {
 		panic(err)
