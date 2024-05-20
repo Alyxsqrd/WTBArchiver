@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/net/html"
@@ -21,6 +22,7 @@ type ForumPost struct {
 	IsPinned   bool
 	Views      int
 	AuthorID   int
+	CreatedAt  int64
 }
 
 func fetchForumPost(id string, client http.Client) (ForumPost, error) {
@@ -194,6 +196,39 @@ func fetchForumPost(id string, client http.Client) (ForumPost, error) {
 	}
 	extractAuthorID(doc)
 
+	// Extract created_at
+	var extractCreatedAt func(*html.Node)
+	extractCreatedAt = func(n *html.Node) {
+		if n.Type == html.ElementNode && n.Data == "div" {
+			for _, attr := range n.Attr {
+				if attr.Key == "class" && attr.Val == "shrink cell post-date" {
+					for c := n.FirstChild; c != nil; c = c.NextSibling {
+						if c.Type == html.ElementNode && c.Data == "div" {
+							for _, attr := range c.Attr {
+								if attr.Key == "class" && attr.Val == "value" {
+									for _, attr := range c.Attr {
+										if attr.Key == "title" {
+											layout := "January 2, 2006 3:04pm"
+											t, err := time.Parse(layout, attr.Val)
+											if err == nil {
+												forumPost.CreatedAt = t.Unix()
+											}
+											return
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			extractCreatedAt(c)
+		}
+	}
+	extractCreatedAt(doc)
+
 	return forumPost, nil
 }
 
@@ -264,20 +299,20 @@ func Archive(max int, pwd string, client http.Client, db *sql.DB) error {
 		forumPost.CategoryID = categoryID
 
 		// Insert scraped data into database
-		stmt, err := db.Prepare("INSERT INTO forum_threads (id, title, category_id, body, is_locked, is_pinned, views, author_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+		stmt, err := db.Prepare("INSERT INTO forum_threads (id, title, category_id, body, is_locked, is_pinned, views, author_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
 		if err != nil {
 			fmt.Println("Error preparing SQL statement:", err)
 			continue
 		}
 		defer stmt.Close()
 
-		_, err = stmt.Exec(forumPost.ID, forumPost.Title, forumPost.CategoryID, forumPost.Body, forumPost.IsLocked, forumPost.IsPinned, forumPost.Views, forumPost.AuthorID)
+		_, err = stmt.Exec(forumPost.ID, forumPost.Title, forumPost.CategoryID, forumPost.Body, forumPost.IsLocked, forumPost.IsPinned, forumPost.Views, forumPost.AuthorID, forumPost.CreatedAt)
 		if err != nil {
 			fmt.Println("Error executing SQL statement:", err)
 			continue
 		}
 
-		fmt.Printf("Successfully archived forum post with ID: %s (Category ID: %d)\n", id, forumPost.CategoryID)
+		fmt.Printf("Successfully archived forum post with ID: %s (Category ID: %d, Created At: %d)\n", id, forumPost.CategoryID, forumPost.CreatedAt)
 	}
 
 	return nil
