@@ -68,7 +68,7 @@ func fetchForumPost(id string, client http.Client) (ForumPost, error) {
 					for c := n.FirstChild; c != nil; c = c.NextSibling {
 						html.Render(&sb, c)
 					}
-					forumPost.Body = sb.String()
+					forumPost.Body = strings.TrimSpace(sb.String()) // Remove leading and trailing whitespace
 					return
 				}
 			}
@@ -127,21 +127,23 @@ func fetchForumPost(id string, client http.Client) (ForumPost, error) {
 	var extractViews func(*html.Node)
 	extractViews = func(n *html.Node) {
 		if n.Type == html.ElementNode && n.Data == "div" {
-			for _, attr := range n.Attr {
-				if attr.Key == "class" && attr.Val == "title" {
-					for c := n.FirstChild; c != nil; c = c.NextSibling {
-						if c.Type == html.TextNode && strings.TrimSpace(c.Data) == "views" {
-							nextSibling := n.NextSibling
-							if nextSibling != nil && nextSibling.Data == "div" && nextSibling.FirstChild != nil && nextSibling.FirstChild.Type == html.TextNode {
-								viewsStr := strings.TrimSpace(nextSibling.FirstChild.Data)
+			if n.FirstChild != nil && n.FirstChild.Type == html.TextNode && strings.TrimSpace(n.FirstChild.Data) == "views" {
+				// Find the sibling div with class "value" containing the views count
+				sibling := n.NextSibling
+				for sibling != nil {
+					if sibling.Type == html.ElementNode && sibling.Data == "div" {
+						for _, attr := range sibling.Attr {
+							if attr.Key == "class" && attr.Val == "value" {
+								viewsStr := strings.TrimSpace(sibling.FirstChild.Data)
 								views, err := strconv.Atoi(viewsStr)
 								if err == nil {
 									forumPost.Views = views
 								}
+								return
 							}
-							return
 						}
 					}
+					sibling = sibling.NextSibling
 				}
 			}
 		}
@@ -149,6 +151,7 @@ func fetchForumPost(id string, client http.Client) (ForumPost, error) {
 			extractViews(c)
 		}
 	}
+
 	extractViews(doc)
 
 	// Extract author_id
