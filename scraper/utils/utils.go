@@ -11,6 +11,7 @@ var leadingTrailingVWS = regexp.MustCompile(`^\n+|\n+$`)
 var leadingTrailingHWS = regexp.MustCompile(`(?m)^[^\S\r\n]+|[^\S\r\n]+$`)
 var redundantILS = regexp.MustCompile(`[^\S\r\n]{2,}`)
 var redundantNL = regexp.MustCompile(`\n{3,}`)
+var htmlEntities = regexp.MustCompile(`&[^;]+;`)
 
 func SanitizeString(input string) string {
 	input = html.UnescapeString(html.UnescapeString(input))
@@ -20,6 +21,8 @@ func SanitizeString(input string) string {
 	input = leadingTrailingHWS.ReplaceAllLiteralString(input, "")
 	input = redundantILS.ReplaceAllLiteralString(input, " ")
 	input = redundantNL.ReplaceAllLiteralString(input, "\n\n")
-
+	input = htmlEntities.ReplaceAllStringFunc(input, func(entity string) string {
+		return html.UnescapeString(entity)
+	})
 	return input
 }

@@ -32,11 +32,64 @@ type creatorData struct {
 
 type productData struct {
 	Name                string
-	Sales               int `json:",string"`
+	Sales               int    `json:"-"`
+	SalesStr            string `json:"sales"`
 	Description         *string
-	BuildBux            int `json:",string"`
-	Qbits               int `json:",string"`
+	BuildBux            int    `json:"-"`
+	BuildBuxStr         string `json:"buildbux"`
+	Qbits               int    `json:"-"`
+	QbitsStr            string `json:"qbits"`
 	FullDate_LastUpdate string
+}
+
+func (pd *productData) UnmarshalJSON(b []byte) error {
+	type Alias productData
+	aux := &struct {
+		SalesStr    string `json:"sales"`
+		BuildBuxStr string `json:"buildbux"`
+		QbitsStr    string `json:"qbits"`
+		*Alias
+	}{
+		Alias: (*Alias)(pd),
+	}
+	if err := json.Unmarshal(b, &aux); err != nil {
+		return err
+	}
+
+	// Process sales string
+	salesStr := strings.ReplaceAll(aux.SalesStr, ",", "")
+	if strings.HasSuffix(salesStr, "K+") {
+		salesStr = strings.TrimSuffix(salesStr, "K+")
+		sales, err := strconv.ParseFloat(salesStr, 64)
+		if err != nil {
+			return err
+		}
+		pd.Sales = int(sales * 1000)
+	} else {
+		sales, err := strconv.Atoi(salesStr)
+		if err != nil {
+			return err
+		}
+		pd.Sales = sales
+	}
+
+	// Process BuildBux string
+	buildBuxStr := strings.ReplaceAll(aux.BuildBuxStr, ",", "")
+	buildBux, err := strconv.Atoi(buildBuxStr)
+	if err != nil {
+		return err
+	}
+	pd.BuildBux = buildBux
+
+	// Process Qbits string
+	qbitsStr := strings.ReplaceAll(aux.QbitsStr, ",", "")
+	qbits, err := strconv.Atoi(qbitsStr)
+	if err != nil {
+		return err
+	}
+	pd.Qbits = qbits
+
+	return nil
 }
 
 type responseData2 struct {
@@ -71,30 +124,25 @@ var typeIDs = map[string]int{
 
 func fetchInfo(id string, client http.Client) (data *responseData1, data2 *responseData2, data3 *responseData3, err error) {
 	res, err := client.Get("https://www.worldtobuild.com/api/shop/fetch-product-data?productId=" + id)
-
 	if err != nil {
 		return nil, nil, nil, err
 	}
-
 	defer res.Body.Close()
 
 	if res.StatusCode != 200 {
 		return nil, nil, nil, errors.New("invalid info status: " + strconv.Itoa(res.StatusCode))
 	}
 
-	err = json.NewDecoder(res.Body).Decode(&data)
-
+	var responseData responseData1
+	err = json.NewDecoder(res.Body).Decode(&responseData)
 	if err != nil {
 		return nil, nil, nil, err
-	} else if data.Data.CreatorData.UserID == 0 {
-		return nil, nil, nil, fmt.Errorf("invalid info json: %+v", data)
 	}
 
+	data = &responseData
 	data.Data.ProductData.Name = utils.SanitizeString(data.Data.ProductData.Name)
-
 	if data.Data.ProductData.Description != nil {
 		description := utils.SanitizeString(*data.Data.ProductData.Description)
-
 		if len(description) == 0 {
 			data.Data.ProductData.Description = nil
 		} else {
@@ -103,33 +151,28 @@ func fetchInfo(id string, client http.Client) (data *responseData1, data2 *respo
 	}
 
 	timestamp, err := time.ParseInLocation("January 02, 2006 3:04pm", data.Data.ProductData.FullDate_LastUpdate, location)
-
 	if err != nil {
 		return nil, nil, nil, err
 	}
-
 	data.Data.ProductData.FullDate_LastUpdate = strconv.FormatInt(timestamp.Unix(), 10)
 
 	res, err = client.Get("https://www.worldtobuild.com/api/shop/fetch-product-tags?productId=" + id)
-
 	if err != nil {
 		return nil, nil, nil, err
 	}
-
 	defer res.Body.Close()
 
 	if res.StatusCode != 200 {
 		return nil, nil, nil, errors.New("invalid tags status: " + strconv.Itoa(res.StatusCode))
 	}
 
-	err = json.NewDecoder(res.Body).Decode(&data2)
-
+	var responseData2 responseData2
+	err = json.NewDecoder(res.Body).Decode(&responseData2)
 	if err != nil {
 		return nil, nil, nil, err
-	} else if data2.Data.Type == "" {
-		return nil, nil, nil, fmt.Errorf("invalid tags json: %+v", data2)
 	}
 
+	data2 = &responseData2
 	slug := data2.Data.Type
 
 	if slug == "Hat" || slug == "Pet" || slug == "Cape" || slug == "Set" {
@@ -139,11 +182,9 @@ func fetchInfo(id string, client http.Client) (data *responseData1, data2 *respo
 	}
 
 	res, err = client.Get("https://lake.worldtobuild.com/marketplace/" + slug + "/" + id)
-
 	if err != nil {
 		return nil, nil, nil, err
 	}
-
 	defer res.Body.Close()
 
 	if res.StatusCode != 200 {
@@ -156,35 +197,29 @@ func fetchInfo(id string, client http.Client) (data *responseData1, data2 *respo
 	for {
 		if doc.Next() == html.ErrorToken {
 			err = doc.Err()
-
 			if err == io.EOF {
 				err = nil
 				break
 			}
-
 			return nil, nil, nil, err
 		}
 
 		tag, hasAttr := doc.TagName()
-
 		if !hasAttr || string(tag) != "div" {
 			continue
 		}
 
 		attr, value, _ := doc.TagAttr()
-
 		if string(attr) != "class" || !strings.HasPrefix(string(value), "jsr jsr3d") {
 			continue
 		}
 
 		attr, value, _ = doc.TagAttr()
-
 		if string(attr) != "design" {
 			continue
 		}
 
 		id2, err := strconv.Atoi(string(value))
-
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -197,13 +232,11 @@ func fetchInfo(id string, client http.Client) (data *responseData1, data2 *respo
 
 func Archive(max int, pwd string, client http.Client, db *sql.DB) error {
 	_, err := db.Exec("DELETE FROM products")
-
 	if err != nil {
 		return err
 	}
 
 	for i := 1; i <= max; i++ {
-		i = 1745
 		id := strconv.Itoa(i)
 
 		data, data2, data3, err := fetchInfo(id, client)

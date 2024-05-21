@@ -44,6 +44,12 @@ type responseData3 struct {
 	Version int
 }
 
+type ratingResponse struct {
+	Success    bool
+	Rating     int `json:"Rating"`
+	DownRating int `json:"DownRating"`
+}
+
 var templateIDs = map[string]int{
 	"template_baseplate2022.png":    1, // baseplate
 	"template_builderscove2022.png": 2, // builders_cove
@@ -128,6 +134,26 @@ func fetchInfo(id string, client http.Client) (data1 *responseData1, data2 *resp
 	}
 
 	return
+}
+
+func fetchRating(id string, client http.Client) (likes int, dislikes int, err error) {
+	res, err := client.Get("https://lake.worldtobuild.com/api/world/FetchRatingByWorldID.action?AssetID=" + id)
+	if err != nil {
+		return 0, 0, err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != 200 {
+		return 0, 0, errors.New("invalid rating status: " + strconv.Itoa(res.StatusCode))
+	}
+
+	var ratingData ratingResponse
+	err = json.NewDecoder(res.Body).Decode(&ratingData)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return ratingData.Rating, ratingData.DownRating, nil
 }
 
 func downloadData(id string, version int, hash string, pwd string, client http.Client) error {
@@ -319,6 +345,13 @@ func Archive(max int, pwd string, client http.Client, db *sql.DB) error {
 			continue
 		}
 
+		likes, dislikes, err := fetchRating(id, client)
+
+		if err != nil {
+			fmt.Println("\033[91m[SKIP] Game #" + id + " Rating: " + err.Error())
+			continue
+		}
+
 		err = downloadData(id, data3.Version, data3.Package, gamesPath, client)
 
 		if err != nil {
@@ -334,8 +367,8 @@ func Archive(max int, pwd string, client http.Client, db *sql.DB) error {
 		}
 
 		_, err = db.Exec(
-			"REPLACE INTO games (id, name, description, category_id, room_size, is_public, is_featured, version, plays, template_id, creator_id, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-			i, data1.Data.Name, data1.Data.About, data1.Data.Category, data2.GameMaxClients, data1.Data.Public, data1.Data.Featured, data3.Version, data1.Data.TotalPlays, template, data1.Data.OwnerID, data2.LastUpdate,
+			"REPLACE INTO games (id, name, description, category_id, room_size, is_public, is_featured, version, plays, template_id, creator_id, updated_at, likes, dislikes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+			i, data1.Data.Name, data1.Data.About, data1.Data.Category, data2.GameMaxClients, data1.Data.Public, data1.Data.Featured, data3.Version, data1.Data.TotalPlays, template, data1.Data.OwnerID, data2.LastUpdate, likes, dislikes,
 		)
 
 		if err != nil {
