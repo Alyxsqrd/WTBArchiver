@@ -1,0 +1,17 @@
+{
+    "version": 1,
+    "health": 100,
+    "shields": 0,
+    "health_regen_delay": 10.0,
+    "health_regen_per_sec": 2,
+    "shields_regen_delay": 3.0,
+    "shields_regen_per_sec": 10,
+    "hide_name_behind_walls": false,
+    "hide_health_until_damage": true,
+    "force_field_time": 3.0,
+    "respawn_time": 3.0,
+    "gravity_multiplier": 1.0,
+    "jumps": 1,
+    "jump_power": 7.5,
+    "skybox": "day03"
+}

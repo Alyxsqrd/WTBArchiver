@@ -1,0 +1,20 @@
+function OnInteracted(character)
+  object.sound.Play()
+  object.voxelRenderer.visible = false
+  object.sound.Play()
+  object.interactable.Remove()
+  wait(2)
+  character.Damage(10)
+  wait(0.6)
+  character.speed = 0.6
+  wait(2)
+  character.Damage(20)
+  wait(2)
+  character.Damage(18)
+  wait(3)
+  character.Damage(23)
+  wait(2)
+  character.Damage(26)
+  wait(5)
+  character.Damage(100)
+end

@@ -1,0 +1,11 @@
+function Begin()
+wait(4)
+object.moveTo(Vector3.New(34.0873, 2.5783, -6.0916), 0.5)
+wait(2)
+object.moveTo(Vector3.New(-60.1127, 2.5783, -6.0916), 1.0)
+wait(3)
+object.moveTo(Vector3.New(-60.1127, 2.5783, -20.0916), 1.0)
+wait(3)
+object.moveTo(Vector3.New(34.0873, 2.5783, -20.0916), 1.0)
+wait(3)
+end

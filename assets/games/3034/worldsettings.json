@@ -1,0 +1,18 @@
+{
+    "version": 1,
+    "health": 30,
+    "shields": 0,
+    "health_regen_delay": 999999986991104.0,
+    "health_regen_per_sec": 0,
+    "shields_regen_delay": 0.0,
+    "shields_regen_per_sec": 0,
+    "hide_name_behind_walls": true,
+    "hide_health_until_damage": false,
+    "force_field_time": 0.0,
+    "respawn_time": 5.0,
+    "gravity_multiplier": 1.0,
+    "jumps": 0,
+    "jump_power": 0.0,
+    "speed": 0.5,
+    "skybox": "night-dark"
+}

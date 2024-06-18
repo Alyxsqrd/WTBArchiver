@@ -1,0 +1,28 @@
+function Begin()
+    Event.Bind(this,"BEGINFINALCOUNTDOWN")
+end
+
+function BEGINFINALCOUNTDOWN()
+    SendSystemChatToAll("10")
+    wait(1)
+    SendSystemChatToAll("9")
+    wait(1)
+    SendSystemChatToAll("8")
+    wait(1)
+    SendSystemChatToAll("7")
+    wait(1)
+    SendSystemChatToAll("6")
+    wait(1)
+    SendSystemChatToAll("5")
+    wait(1)
+    SendSystemChatToAll("4")
+    wait(1)
+    SendSystemChatToAll("3")
+    wait(1)
+    SendSystemChatToAll("2")
+    wait(1)
+    SendSystemChatToAll("1")
+    wait(1)
+    GetAllAliveCharacters()[1].position = GetObjectByName("FinishRoomOut").position
+    SendSystemChatToAll("HAPPY NEW YEAR!")
+end

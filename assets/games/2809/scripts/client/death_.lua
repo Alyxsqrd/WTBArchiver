@@ -1,0 +1,1 @@
+player.damage.100

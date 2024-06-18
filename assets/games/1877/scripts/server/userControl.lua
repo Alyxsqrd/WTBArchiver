@@ -1,0 +1,3 @@
+function OnCharacterSpawn(character)
+    
+end

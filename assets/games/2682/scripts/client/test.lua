@@ -1,0 +1,1 @@
+SendSystemChatToAll("wowee")

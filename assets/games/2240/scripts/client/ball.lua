@@ -1,0 +1,3 @@
+function OnTouchBegin()
+
+end

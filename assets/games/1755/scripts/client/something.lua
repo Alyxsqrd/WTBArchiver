@@ -1,0 +1,1 @@
+CreateTalkMessage("[Pixtle's Chat Bot]: Hello and welcome to my place where I test scripts! I have this place so users can see what I'm working on.")

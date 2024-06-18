@@ -1,0 +1,20 @@
+function Begin()
+  while true do
+    wait(0.05)
+    object.sound.Play()
+    wait(0.05)
+    object.sound.Play()
+    wait(0.05)
+    object.sound.Play()
+    wait(0.05)
+    object.sound.Play()
+    wait(0.05)
+    object.sound.Play()
+    wait(0.05)
+    object.sound.Play()
+    wait(0.05)
+    object.sound.Play()
+    wait(0.4)
+    object.sound.Play()
+  end
+end

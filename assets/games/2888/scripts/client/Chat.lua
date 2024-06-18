@@ -1,0 +1,1 @@
+SendSystemChatToAll("Welcome to Paperr's Difficuty Chart Obby. There are currently 2 stages, Easy and Average!")

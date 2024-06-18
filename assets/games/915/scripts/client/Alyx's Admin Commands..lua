@@ -1,0 +1,5 @@
+function Start()
+   print('');
+
+end
+
