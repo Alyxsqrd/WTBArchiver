@@ -1,9 +1,9 @@
+<script setup lang="ts">
+import Database from './components/Database.vue';
+</script>
+
 <template>
 	<Suspense>
-		<DBTable></DBTable>
+		<Database></Database>
 	</Suspense>
 </template>
-
-<script setup>
-import DBTable from './components/DBTable.vue';
-</script>
